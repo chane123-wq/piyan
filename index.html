@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✊✋✌️ 剪刀石頭布 終極大對決</title>
+    <style>
+        /* CSS：美化網頁介面 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .game-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 { color: #333; }
+        .setup-section, .game-section, .result-section {
+            margin-top: 20px;
+        }
+        .hidden { display: none; }
+        input {
+            padding: 10px;
+            font-size: 16px;
+            width: 80%;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover { background-color: #0056b3; }
+        .action-btn {
+            font-size: 24px;
+            padding: 15px 25px;
+            margin: 10px;
+            background-color: #e9ecef;
+            color: black;
+            border: 2px solid #dee2e6;
+        }
+        .action-btn:hover { background-color: #ced4da; }
+        .score-board {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+        .log-box {
+            background-color: #1e1e1e;
+            color: #76ff03;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: left;
+            font-family: monospace;
+            min-height: 100px;
+            white-space: pre-line;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <h1>✊✋✌️ 終極大對決</h1>
+
+    <!-- 1. 冒險者登入階段 -->
+    <div id="setup-stage" class="setup-section">
+        <h3>=== 冒險者登入 ===</h3>
+        <input type="text" id="player-name" placeholder="請輸入你的冒險者名字" value="勇敢的冒險者"><br>
+        <input type="text" id="player-equipment" placeholder="請選擇你的使用裝備（如：黃金鍵盤）" value="黃金鍵盤"><br>
+        <button onclick="startGame()">開始冒險</button>
+    </div>
+
+    <!-- 2. 遊戲進行階段 -->
+    <div id="game-stage" class="game-section hidden">
+        <div id="broadcast"></div>
+        <div class="score-board" id="score-board">
+            🏆 第 1 回合 | 你：0 勝 vs 電腦：0 勝
+        </div>
+        
+        <p><strong>請選擇你的出拳：</strong></p>
+        <button class="action-btn" onclick="playRound('剪刀')">✌️ 剪刀</button>
+        <button class="action-btn" onclick="playRound('石頭')">✊ 石頭</button>
+        <button class="action-btn" onclick="playRound('布')">✋ 布</button>
+
+        <h3 style="margin-top:20px;">戰鬥日誌</h3>
+        <div class="log-box" id="game-log">等待出拳中...</div>
+    </div>
+
+    <!-- 3. 最終結算階段 -->
+    <div id="result-stage" class="result-section hidden">
+        <h2>🌟 最終結果 🌟</h2>
+        <p id="final-message" style="font-size: 18px; font-weight: bold;"></p>
+        <button onclick="resetGame()" style="background-color: #28a745;">重新挑戰</button>
+    </div>
+</div>
+
+<script>
+    // JavaScript：掌控遊戲邏輯 (對應你的 Python 邏輯)
+    let name = "";
+    let equipment = "";
+    let playerWins = 0;
+    let computerWins = 0;
+    let roundNum = 1;
+    const options = ["剪刀", "石頭", "布"];
+
+    // 點擊「開始冒險」觸發
+    function startGame() {
+        name = document.getElementById("player-name").value.trim() || "冒險者";
+        equipment = document.getElementById("player-equipment").value.trim() || "赤手空拳";
+
+        // 顯示前置劇情
+        document.getElementById("broadcast").innerHTML = `
+            <p><strong>=== 系統廣播 ===</strong><br>
+            歡迎勇敢的冒險者【\${name}】！<br>
+            你已經裝備了【\${equipment}】，準備好迎接【猜拳】挑戰！(先得 3 勝者贏)</p>
+        `;
+
+        // 切換畫面
+        document.getElementById("setup-stage").classList.add("hidden");
+        document.getElementById("game-stage").classList.remove("hidden");
+        updateScoreBoard();
+    }
+
+    // 玩家點擊剪刀石頭布按鈕時觸發 (對應 Python 的 while 內的一回合)
+    function playRound(playerChoice) {
+        // 安全檢查：若已經有人3勝，就不執行（網頁版由事件驅動，不使用 blocking while）
+        if (playerWins >= 3 || computerWins >= 3) return;
+
+        // 電腦隨機出拳 (對應 random.choice)
+        const computerChoice = options[Math.floor(Math.random() * options.length)];
+        
+        let logText = `🤖 電腦出了：\${computerChoice}\n`;
+
+        // 勝負判斷
+        if (playerChoice === computerChoice) {
+            logText += "📢 平手！沒有人得分。\n";
+        } else if (
+            (playerChoice === "剪刀" && computerChoice === "布") ||
+            (playerChoice === "石頭" && computerChoice === "剪刀") ||
+            (playerChoice === "布" && computerChoice === "石頭")
+        ) {
+            logText += "🎉 這回合你贏了！\n";
+            playerWins++;
+        } else {
+            logText += "💥 這回合電腦贏了！\n";
+            computerWins++;
+        }
+
+        // 回合數增加
+        roundNum++;
+        
+        // 更新網頁顯示
+        document.getElementById("game-log").innerText = `你出了：\${playerChoice}\n` + logText;
+        updateScoreBoard();
+
+        // 檢查最終勝負 (對應 6. 最終結算)
+        if (playerWins === 3 || computerWins === 3) {
+            endGame();
+        }
+    }
+
+    // 更新計分板
+    function updateScoreBoard() {
+        document.getElementById("score-board").innerText = 
+            `🏆 第 \${roundNum} 回合 - 你：\${playerWins} 勝 | 電腦：\${computerWins} 勝`;
+    }
+
+    // 遊戲結束
+    function endGame() {
+        document.getElementById("game-stage").classList.add("hidden");
+        document.getElementById("result-stage").classList.remove("hidden");
+
+        const finalMessageEle = document.getElementById("final-message");
+        if (playerWins === 3) {
+            finalMessageEle.innerHTML = `<span style="color: #28a745;">🏆 恭喜你以 \${playerWins} : \${computerWins} 擊敗了電腦，成為剪刀石頭布大師！</span>`;
+        } else {
+            finalMessageEle.innerHTML = `<span style="color: #dc3545;">💻 很可惜，電腦以 \${computerWins} : \${playerWins} 獲得了最終勝利，下次再來挑戰吧！</span>`;
+        }
+    }
+
+    // 重新開始遊戲
+    function resetGame() {
+        playerWins = 0;
+        computerWins = 0;
+        roundNum = 1;
+        document.getElementById("game-log").innerText = "等待出拳中...";
+        document.getElementById("result-stage").classList.add("hidden");
+        document.getElementById("setup-stage").classList.remove("hidden");
+    }
+</script>
+
+</body>
+</html>
